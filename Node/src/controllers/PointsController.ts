@@ -20,6 +20,25 @@ class PointsController {
     return response.json(points);
   }
 
+  async show(request: Request, response: Response) {
+    const { id } = request.params;
+
+    const point = await knex('points').where('id', id).first();
+
+    if (!point) {
+      return response
+        .status(400)
+        .json({ error: `Point with ID ${id} not found` });
+    }
+
+    const items = await knex('items')
+      .select('items.title')
+      .join('point_items', 'items.id', '=', 'point_items.item_id')
+      .where('point_items.point_id', id);
+
+    return response.json({ ...point, items });
+  }
+
   async create(request: Request, response: Response) {
     const {
       name,
@@ -63,10 +82,22 @@ class PointsController {
     });
   }
 
-  async show(request: Request, response: Response) {
+  async update(request: Request, response: Response) {
     const { id } = request.params;
+    const {
+      name,
+      email,
+      whatsapp,
+      latitude,
+      longitude,
+      city,
+      uf,
+      items,
+    } = request.body;
 
-    const point = await knex('points').where('id', id).first();
+    const trx = await knex.transaction();
+
+    const point = await trx('points').where('id', id).first();
 
     if (!point) {
       return response
@@ -74,15 +105,45 @@ class PointsController {
         .json({ error: `Point with ID ${id} not found` });
     }
 
-    const items = await knex('items')
-      .select('items.title')
-      .join('point_items', 'items.id', '=', 'point_items.item_id')
-      .where('point_items.point_id', id);
+    const pointCreated = {
+      image:
+        'https://images.unsplash.com/photo-1554486855-60050042cd53?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60',
+      name,
+      email,
+      whatsapp,
+      latitude,
+      longitude,
+      city,
+      uf,
+    };
 
-    return response.json({ ...point, items });
+    await trx('items').update(pointCreated).where('id', id);
+
+    await trx.commit();
+
+    return response.json({ id, ...pointCreated });
   }
-  async update(request: Request, response: Response) {}
-  async delete(request: Request, response: Response) {}
+
+  async delete(request: Request, response: Response) {
+    const { id } = request.params;
+
+    const trx = await knex.transaction();
+
+    const point = await trx('points').where('id', id).first();
+
+    if (!point) {
+      return response
+        .status(400)
+        .json({ error: `Point with ID ${id} not found` });
+    }
+
+    await trx('point_items').delete().where('point_id', id);
+    await trx('points').delete().where('id', id);
+
+    await trx.commit();
+
+    return response.json();
+  }
 }
 
 export default new PointsController();
