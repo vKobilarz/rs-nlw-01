@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 
 import knex from '../database/connection';
+import IController from '../interfaces/KnexController';
 
-class PointsController {
+class PointsController implements IController {
   async index(request: Request, response: Response) {
     const { city, uf, items } = request.query;
 

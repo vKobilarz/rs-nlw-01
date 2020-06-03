@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 
 import knex from '../database/connection';
+import IController from '../interfaces/KnexController';
 
-class ItemsController {
+class ItemsController implements IController {
   async index(request: Request, response: Response) {
     const items = await knex('items').select('*');
 
